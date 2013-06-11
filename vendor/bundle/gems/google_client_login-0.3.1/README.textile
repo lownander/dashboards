@@ -1,0 +1,139 @@
+h1. Google_Client_Login Gem
+
+This gem provides authorization for access to Google API-based services using Google's ClientLogin scheme. Add this gem to a Rails application to gain access to Google services that require login to a user's Google account.
+
+The Google ClientLogin scheme is described in this document: "http://code.google.com/apis/accounts/docs/AuthForInstalledApps.html":http://code.google.com/apis/accounts/docs/AuthForInstalledApps.html
+
+h2. Similar Gems
+
+For an alternative implementation, see Jason L. Perry's "https://github.com/ambethia/google-client_login":https://github.com/ambethia/google-client_login. Note the similarity in gem names. Jason L. Perry's gem is "google-client_login" (with one hyphen and one underscore). This gem is "google_client_login" (with two underscores).
+
+h2. Implementation
+
+h3. What Is Implemented
+
+Given an email address and a password, this gem will request an authorization token from Google. The gem accommodates all error conditions with robust exception handling, including conditions where Google presents a CAPTCHA challenge.
+
+h3. What Is Not Implemented
+
+By itself, this gem is not sufficient to implement access to any Google API. It only provides an authorization token. Access to most Google APIs requires additional code to provide details such as a developer identity token in addition to the authorization token.
+
+h3. An Example: Accessing the Google AdWords API
+
+Using the Google AdWords API, you can control most aspects of an AdWords campaign programmatically. A developer applies for AdWords API access from within an AdWords "My Client Center" (MCC) account. The developer is assigned a "developer token" once the application is approved. This unique text string of letters, numbers and symbols must be included in every API request to the servers. In addition to supplying the developer token in every API request, the application also must provide an "authorization token". The authorization token is sent as part of the API request as a form of proof that you are who you claim to be, and that you are allowed access to the API. Your application obtains authorization separately from API requests, making it a two step process: first retrieve a token, and then include it with your requests. You obtain an authorization token by sending a login request to Google's servers, providing an email address and password that matches your Google account. This gem provides the library that allows you to obtain the authorization token.
+
+Here is Google's documentation about how ClientLogin works with the AdWords API: "http://adwordsapi.blogspot.com/2010/07/discover-v2009-working-with-authtokens.html":http://adwordsapi.blogspot.com/2010/07/discover-v2009-working-with-authtokens.html
+
+h2. Dependencies
+
+This app is based on the Ruby language version 1.8.7 or 1.9.2 and has been tested with Rails 3.0.3.
+
+Check that appropriate versions of Ruby and Rails are installed in your development environment:
+
+<pre>
+$ ruby -v
+$ rails -v
+</pre>
+
+h2. Usage
+
+h3. Basic Usage
+
+Include this gem in your Gemfile:
+
+@gem "google_client_login"@
+
+Be sure to run @bundle install@.
+
+Create a method for authentication in a Rails model or controller. This example would be suitable for access to the AdWords API:
+
+<pre>
+def authenticate(email, password)
+  login_service = GoogleClientLogin::GoogleAuth.new(:accountType => 'GOOGLE', 
+                          :service => 'adwords', 
+                          :source => 'companyName-applicationName-versionID')
+  login_service.authenticate(email, password)
+  auth_token = login_service.auth
+end
+</pre>
+                                         
+Three parameters are supplied to the initialization method: service, source and (optionally) accountType.
+
+* :service - the service identifier (see your Google API documentation)
+* :source - the name of your application, like "companyName-applicationName-versionID"
+* :accountType - "GOOGLE", "HOSTED", "HOSTED_OR_GOOGLE" (default)
+
+After initializing an instance of GoogleAuth and calling the @authenticate@ method, if there is no exception thrown, you can obtain the authentication token by calling the @auth@ method.
+
+In the response, Google provides additional values, labeled "SID" and "LSID", which are not useful (Google says they "are not currently active and should not be used"). You could use the @sid@ and @lsid@ methods to obtain these values.
+
+h3. Advanced Usage (Handling CAPTCHA)
+
+To block automated attempts to obtain user passwords, Google may add a visual CAPTCHA™ to the authentication process; this usually happens when the server suspects an illegal intrusion, such as after too many incorrect login attempts. A CAPTCHA ensures that a real person is trying to log in. When this happens the @authenticate@ method will raise an exception (@CaptchaRequired@).
+
+The URL to the CAPTCHA is accesible via the @captcha_url@ method. Extending the example given above:
+
+<pre>
+    login_service.captcha_url
+    => http://www.google.com/accounts/Captcha?ctoken=HiteT4b0Bk5Xg18_AcVoP6-yFkHPibe7O9EqxeiI7lUSN
+</pre>
+
+You can write code to catch the @CaptchaRequired@ exception and display the CAPTCHA image. After the user has interpreted the CAPTCHA, you can resubmit the authentication request including the user's CAPTCHA response.
+
+@login_service.authenticate email, password, captcha_response@
+
+You can use a convenient block construct. If you give a block to the @authenticate@ method, the block will be called with the CAPTCHA URL. The return value from the block should be the CAPTCHA answer. And it will attempt to authenticate again automatically.
+
+h2. Testing
+
+The gem includes tests created with RSpec. If you've obtained the source code for the gem, you can run the tests:
+
+@rake spec@
+
+h2. Documentation and Support
+
+This application is provided without additional documentation or support.
+
+Any issues? Please create an "Issue":http://github.com/fortuity/google_client_login/issues on GitHub.
+
+h2. Contributing
+
+If you make improvements to this application, please share with others.
+
+* Fork the project on GitHub.
+* Make your feature addition or bug fix.
+* Commit with Git.
+* Send the author a pull request.
+
+If you add functionality to this application, create an alternative implementation, or build an application that shows how this gem can be used, please contact me and I'll add a note to the README so that others can find your work.
+
+h2. Credits
+
+Toon Willems ("http://twitter.com/nudded":http://twitter.com/nudded) created the Ruby library.
+
+Daniel Kehoe ("http://twitter.com/yaxdotcom":http://twitter.com/yaxdotcom) created the gem.
+
+h2. MIT License
+
+Copyright (c) 2010 Toon Willems
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
